@@ -7,6 +7,7 @@ interface PlaybackButtonsProps {
   onRepeatClick: () => void;
   isPlaying?: boolean;
   isRepeating?: boolean;
+  disabled?: boolean;
   sx?: SxProps<Theme>;
 }
 
@@ -15,6 +16,7 @@ const PlaybackButtons = ({
   onRepeatClick,
   isPlaying = false,
   isRepeating = false,
+  disabled = false,
   sx = [],
 }: PlaybackButtonsProps): JSX.Element => {
   return (
@@ -23,9 +25,9 @@ const PlaybackButtons = ({
       gap={1}
       sx={[{ justifyContent: 'center', alignItems: 'center' }, ...(Array.isArray(sx) ? sx : [sx])]}
     >
-      <RepeatButton onClick={onRepeatClick} actived={isRepeating} sx={{ visibility: 'hidden' }} />
-      <PlayButton onClick={onPlayClick} actived={isPlaying} />
-      <RepeatButton onClick={onRepeatClick} actived={isRepeating} />
+      <RepeatButton onClick={onRepeatClick} actived={isRepeating} sx={{ visibility: 'hidden' }} disabled={disabled} />
+      <PlayButton onClick={onPlayClick} actived={isPlaying} disabled={disabled} />
+      <RepeatButton onClick={onRepeatClick} actived={isRepeating} disabled={disabled} />
     </Stack>
   );
 };

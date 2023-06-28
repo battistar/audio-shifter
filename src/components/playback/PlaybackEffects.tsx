@@ -6,6 +6,7 @@ interface PlaybackEffectsProps {
   onSpeedChange: (speed: number) => void;
   pitch: number;
   speed: number;
+  disabled?: boolean;
   sx?: SxProps<Theme>;
 }
 
@@ -14,6 +15,7 @@ const PlaybackEffects = ({
   onSpeedChange,
   pitch,
   speed,
+  disabled = false,
   sx = [],
 }: PlaybackEffectsProps): JSX.Element => {
   const handlePitchChange = useCallback(
@@ -47,6 +49,7 @@ const PlaybackEffects = ({
           max={8}
           onChange={handlePitchChange}
           value={pitch}
+          disabled={disabled}
         />
       </Stack>
       <Stack gap={1} sx={{ justifyContent: 'center', alignItems: 'center' }}>
@@ -61,6 +64,7 @@ const PlaybackEffects = ({
           max={2}
           onChange={handleSpeedChange}
           value={speed}
+          disabled={disabled}
         />
       </Stack>
     </Stack>

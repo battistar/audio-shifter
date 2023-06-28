@@ -1,11 +1,14 @@
-import { Container, CssBaseline, ThemeProvider, createTheme, useMediaQuery } from '@mui/material';
-import PlaybackButtons from './components/PlaybackButtons';
-import PlaybackEffects from './components/PlaybackEffects';
-import { usePlayback } from './store';
+import { Container, CssBaseline, Stack, ThemeProvider, createTheme, useMediaQuery } from '@mui/material';
+import PlaybackButtons from 'components/playback/PlaybackButtons';
+import PlaybackEffects from 'components/playback/PlaybackEffects';
+import { useAudioFile, usePlayback } from 'store';
 import { useCallback, useMemo } from 'react';
+import FileInfo from 'components/file/FileInfo';
+import Uploader from 'components/file/Uploader';
 
 const App = (): JSX.Element => {
   const { setIsPlaying, setIsRepeating, isPlaying, isRepeating, setPitch, setSpeed, pitch, speed } = usePlayback();
+  const { file, metadata, setFile } = useAudioFile();
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
 
   const theme = useMemo(
@@ -40,22 +43,39 @@ const App = (): JSX.Element => {
     [setSpeed]
   );
 
+  const handleUpload = (file: File): void => {
+    setFile(file);
+  };
+
+  const handleFileDelete = (): void => {
+    setFile(null);
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Container maxWidth="md">
-        <PlaybackButtons
-          onPlayClick={handlePlayClick}
-          onRepeatClick={handleRepeatClick}
-          isPlaying={isPlaying}
-          isRepeating={isRepeating}
-        />
-        <PlaybackEffects
-          onPitchChange={handlePitchChange}
-          onSpeedChange={handleSpeedChange}
-          pitch={pitch}
-          speed={speed}
-        />
+        <Stack gap={1}>
+          {file ? (
+            <FileInfo metadata={metadata} onDeleteClick={handleFileDelete} deleteDisabled={isPlaying} />
+          ) : (
+            <Uploader onUpload={handleUpload} />
+          )}
+          <PlaybackButtons
+            onPlayClick={handlePlayClick}
+            onRepeatClick={handleRepeatClick}
+            isPlaying={isPlaying}
+            isRepeating={isRepeating}
+            disabled={file === null}
+          />
+          <PlaybackEffects
+            onPitchChange={handlePitchChange}
+            onSpeedChange={handleSpeedChange}
+            pitch={pitch}
+            speed={speed}
+            disabled={file === null}
+          />
+        </Stack>
       </Container>
     </ThemeProvider>
   );
