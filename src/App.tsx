@@ -1,14 +1,13 @@
 import { Container, CssBaseline, Stack, ThemeProvider, createTheme, useMediaQuery } from '@mui/material';
 import PlaybackButtons from 'components/playback/PlaybackButtons';
 import PlaybackEffects from 'components/playback/PlaybackEffects';
-import { useAudioFile, usePlayback } from 'store';
 import { useCallback, useMemo } from 'react';
 import FileInfo from 'components/file/FileInfo';
 import Uploader from 'components/file/Uploader';
+import { useAudio } from 'store';
 
 const App = (): JSX.Element => {
-  const { setIsPlaying, setIsRepeating, isPlaying, isRepeating, setPitch, setSpeed, pitch, speed } = usePlayback();
-  const { file, metadata, setFile } = useAudioFile();
+  const { playback, file, metadata, setFile } = useAudio();
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
 
   const theme = useMemo(
@@ -22,25 +21,29 @@ const App = (): JSX.Element => {
   );
 
   const handlePlayClick = useCallback(() => {
-    setIsPlaying(!isPlaying);
-  }, [setIsPlaying, isPlaying]);
+    if (playback.isPlaying) {
+      playback.pause();
+    } else {
+      playback.play();
+    }
+  }, [playback]);
 
   const handleRepeatClick = useCallback(() => {
-    setIsRepeating(!isRepeating);
-  }, [setIsRepeating, isRepeating]);
+    playback.loop(!playback.isLooping);
+  }, [playback]);
 
   const handlePitchChange = useCallback(
     (pitch: number) => {
-      setPitch(pitch);
+      playback.setPitch(pitch);
     },
-    [setPitch]
+    [playback]
   );
 
   const handleSpeedChange = useCallback(
     (speed: number) => {
-      setSpeed(speed);
+      playback.setSpeed(speed);
     },
-    [setSpeed]
+    [playback]
   );
 
   const handleUpload = (file: File): void => {
@@ -57,22 +60,22 @@ const App = (): JSX.Element => {
       <Container maxWidth="md">
         <Stack gap={1}>
           {file ? (
-            <FileInfo metadata={metadata} onDeleteClick={handleFileDelete} deleteDisabled={isPlaying} />
+            <FileInfo metadata={metadata} onDeleteClick={handleFileDelete} deleteDisabled={playback.isPlaying} />
           ) : (
             <Uploader onUpload={handleUpload} />
           )}
           <PlaybackButtons
             onPlayClick={handlePlayClick}
             onRepeatClick={handleRepeatClick}
-            isPlaying={isPlaying}
-            isRepeating={isRepeating}
+            isPlaying={playback.isPlaying}
+            isLooping={playback.isLooping}
             disabled={file === null}
           />
           <PlaybackEffects
             onPitchChange={handlePitchChange}
             onSpeedChange={handleSpeedChange}
-            pitch={pitch}
-            speed={speed}
+            pitch={playback.pitch}
+            speed={playback.speed}
             disabled={file === null}
           />
         </Stack>
