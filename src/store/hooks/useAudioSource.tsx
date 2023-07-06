@@ -1,8 +1,9 @@
 import { useTheme } from '@mui/material';
 import Metadata from 'models/Metadata';
 import { parseBlob, selectCover } from 'music-metadata-browser';
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef } from 'react';
 import WaveSurfer from 'wavesurfer.js';
+import RegionsPlugin from 'wavesurfer.js/src/plugin/regions';
 
 type Playback = {
   isPlaying: boolean;
@@ -20,6 +21,7 @@ type AudioSourceState = {
   file: File | null;
   metadata: Metadata;
   playback: Omit<Playback, 'play' | 'pause' | 'loop' | 'setPitch' | 'setSpeed'>;
+  wavesurfer: WaveSurfer | null;
 };
 
 type AudioSourceActions =
@@ -29,7 +31,8 @@ type AudioSourceActions =
   | { type: 'pause' }
   | { type: 'loop'; payload: boolean }
   | { type: 'setPitch'; payload: number }
-  | { type: 'setSpeed'; payload: number };
+  | { type: 'setSpeed'; payload: number }
+  | { type: 'setWavesurfer'; payload: WaveSurfer | null };
 
 const useAudioSource = (): {
   setFile: (file: File | null) => void;
@@ -38,7 +41,7 @@ const useAudioSource = (): {
   playback: Playback;
   waveformRef: React.MutableRefObject<null> | null;
 } => {
-  const [{ file, metadata, playback }, dispatch] = useReducer(
+  const [{ file, metadata, playback, wavesurfer }, dispatch] = useReducer(
     (state: AudioSourceState, action: AudioSourceActions) => {
       switch (action.type) {
         case 'setFile':
@@ -55,6 +58,8 @@ const useAudioSource = (): {
           return { ...state, playback: { ...state.playback, pitch: action.payload } };
         case 'setSpeed':
           return { ...state, playback: { ...state.playback, speed: action.payload } };
+        case 'setWavesurfer':
+          return { ...state, wavesurfer: action.payload };
       }
     },
     {
@@ -71,12 +76,10 @@ const useAudioSource = (): {
         pitch: 0,
         speed: 1,
       },
+      wavesurfer: null,
     }
   );
-
-  const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null);
   const waveformRef = useRef(null);
-
   const theme = useTheme();
 
   useEffect(() => {
@@ -114,14 +117,28 @@ const useAudioSource = (): {
         cursorColor: theme.palette.primary.main,
         splitChannels: true,
         responsive: true,
+        plugins: [
+          RegionsPlugin.create({
+            regions: [
+              {
+                start: 10,
+                end: 50,
+                loop: true,
+                color: theme.palette.primary.main + '80',
+              },
+            ],
+            deferInit: true,
+          }),
+        ],
       });
 
       ws.loadBlob(file);
 
-      setWavesurfer(ws);
+      dispatch({ type: 'setWavesurfer', payload: ws });
 
       return () => {
         ws.destroy();
+        dispatch({ type: 'setWavesurfer', payload: null });
       };
     }
   }, [theme, waveformRef, file]);
@@ -144,9 +161,33 @@ const useAudioSource = (): {
     }
   }, [wavesurfer]);
 
-  const loop = useCallback((isLooping: boolean) => {
-    dispatch({ type: 'loop', payload: isLooping });
-  }, []);
+  const loop = useCallback(
+    (isLooping: boolean) => {
+      if (wavesurfer) {
+        if (isLooping) {
+          wavesurfer
+            .addPlugin(
+              RegionsPlugin.create({
+                regions: [
+                  {
+                    start: 0,
+                    end: wavesurfer.getDuration(),
+                    showTooltip: true,
+                    loop: true,
+                    color: theme.palette.primary.main + '80',
+                  },
+                ],
+              })
+            )
+            .initPlugin('regions');
+        } else {
+          wavesurfer.destroyPlugin('regions');
+        }
+      }
+      dispatch({ type: 'loop', payload: isLooping });
+    },
+    [theme.palette.primary.main, wavesurfer]
+  );
 
   const setPitch = useCallback((pitch: number) => {
     dispatch({ type: 'setPitch', payload: pitch });
