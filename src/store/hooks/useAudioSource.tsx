@@ -3,13 +3,15 @@ import Metadata from 'models/Metadata';
 import { parseBlob, selectCover } from 'music-metadata-browser';
 import { useCallback, useEffect, useReducer, useRef } from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import RegionsPlugin from 'wavesurfer.js/src/plugin/regions';
+import RegionsPlugin, { Region } from 'wavesurfer.js/src/plugin/regions';
 
 type Playback = {
   isPlaying: boolean;
   isLooping: boolean;
   pitch: number;
   speed: number;
+  loopStart: number | null;
+  loopEnd: number | null;
   play: () => void;
   pause: () => void;
   loop: (isLooping: boolean) => void;
@@ -22,6 +24,33 @@ type AudioSourceState = {
   metadata: Metadata;
   playback: Omit<Playback, 'play' | 'pause' | 'loop' | 'setPitch' | 'setSpeed'>;
   wavesurfer: WaveSurfer | null;
+  loading: {
+    isMetadataLoading: boolean;
+    isWavesurferLoading: boolean;
+  };
+};
+
+const initialState = {
+  file: null,
+  metadata: {
+    cover: null,
+    title: '',
+    artist: '',
+    album: '',
+  },
+  playback: {
+    isPlaying: false,
+    isLooping: false,
+    pitch: 0,
+    speed: 1,
+    loopStart: null,
+    loopEnd: null,
+  },
+  wavesurfer: null,
+  loading: {
+    isMetadataLoading: false,
+    isWavesurferLoading: false,
+  },
 };
 
 type AudioSourceActions =
@@ -32,7 +61,12 @@ type AudioSourceActions =
   | { type: 'loop'; payload: boolean }
   | { type: 'setPitch'; payload: number }
   | { type: 'setSpeed'; payload: number }
-  | { type: 'setWavesurfer'; payload: WaveSurfer | null };
+  | { type: 'setLoopStart'; payload: number | null }
+  | { type: 'setLoopEnd'; payload: number | null }
+  | { type: 'setWavesurfer'; payload: WaveSurfer | null }
+  | { type: 'setIsMetadataLoading'; payload: boolean }
+  | { type: 'setIsWavesurferLoading'; payload: boolean }
+  | { type: 'reset' };
 
 const useAudioSource = (): {
   setFile: (file: File | null) => void;
@@ -40,8 +74,9 @@ const useAudioSource = (): {
   metadata: Metadata;
   playback: Playback;
   waveformRef: React.MutableRefObject<null> | null;
+  isLoading: boolean;
 } => {
-  const [{ file, metadata, playback, wavesurfer }, dispatch] = useReducer(
+  const [{ file, metadata, playback, wavesurfer, loading }, dispatch] = useReducer(
     (state: AudioSourceState, action: AudioSourceActions) => {
       switch (action.type) {
         case 'setFile':
@@ -58,26 +93,21 @@ const useAudioSource = (): {
           return { ...state, playback: { ...state.playback, pitch: action.payload } };
         case 'setSpeed':
           return { ...state, playback: { ...state.playback, speed: action.payload } };
+        case 'setLoopStart':
+          return { ...state, playback: { ...state.playback, loopStart: action.payload } };
+        case 'setLoopEnd':
+          return { ...state, playback: { ...state.playback, loopEnd: action.payload } };
         case 'setWavesurfer':
           return { ...state, wavesurfer: action.payload };
+        case 'setIsMetadataLoading':
+          return { ...state, loading: { ...state.loading, isMetadataLoading: action.payload } };
+        case 'setIsWavesurferLoading':
+          return { ...state, loading: { ...state.loading, isWavesurferLoading: action.payload } };
+        case 'reset':
+          return initialState;
       }
     },
-    {
-      file: null,
-      metadata: {
-        cover: null,
-        title: '',
-        artist: '',
-        album: '',
-      },
-      playback: {
-        isPlaying: false,
-        isLooping: false,
-        pitch: 0,
-        speed: 1,
-      },
-      wavesurfer: null,
-    }
+    initialState
   );
   const waveformRef = useRef(null);
   const theme = useTheme();
@@ -85,6 +115,8 @@ const useAudioSource = (): {
   useEffect(() => {
     const setMetadata = async (): Promise<void> => {
       if (file) {
+        dispatch({ type: 'setIsMetadataLoading', payload: true });
+
         const { common } = await parseBlob(file);
 
         const metadata = {
@@ -95,15 +127,7 @@ const useAudioSource = (): {
         };
 
         dispatch({ type: 'setMetadata', payload: metadata });
-      } else {
-        const metadata = {
-          cover: null,
-          title: '',
-          artist: '',
-          album: '',
-        };
-
-        dispatch({ type: 'setMetadata', payload: metadata });
+        dispatch({ type: 'setIsMetadataLoading', payload: false });
       }
     };
 
@@ -112,24 +136,31 @@ const useAudioSource = (): {
 
   useEffect(() => {
     if (waveformRef.current && file) {
+      dispatch({ type: 'setIsWavesurferLoading', payload: true });
+
       const ws = WaveSurfer.create({
         container: waveformRef.current,
         cursorColor: theme.palette.primary.main,
         splitChannels: true,
         responsive: true,
-        plugins: [
-          RegionsPlugin.create({
-            regions: [
-              {
-                start: 10,
-                end: 50,
-                loop: true,
-                color: theme.palette.primary.main + '80',
-              },
-            ],
-            deferInit: true,
-          }),
-        ],
+        plugins: [RegionsPlugin.create({})],
+      });
+
+      ws.on('ready', () => {
+        dispatch({ type: 'setIsWavesurferLoading', payload: false });
+      });
+
+      ws.on('region-created', () => {
+        dispatch({ type: 'loop', payload: true });
+      });
+
+      ws.on('region-updated', (region: Region) => {
+        dispatch({ type: 'setLoopStart', payload: region.start });
+        dispatch({ type: 'setLoopEnd', payload: region.end });
+      });
+
+      ws.on('region-removed', () => {
+        dispatch({ type: 'loop', payload: false });
       });
 
       ws.loadBlob(file);
@@ -138,7 +169,7 @@ const useAudioSource = (): {
 
       return () => {
         ws.destroy();
-        dispatch({ type: 'setWavesurfer', payload: null });
+        dispatch({ type: 'reset' });
       };
     }
   }, [theme, waveformRef, file]);
@@ -165,28 +196,21 @@ const useAudioSource = (): {
     (isLooping: boolean) => {
       if (wavesurfer) {
         if (isLooping) {
-          wavesurfer
-            .addPlugin(
-              RegionsPlugin.create({
-                regions: [
-                  {
-                    start: 0,
-                    end: wavesurfer.getDuration(),
-                    showTooltip: true,
-                    loop: true,
-                    color: theme.palette.primary.main + '80',
-                  },
-                ],
-              })
-            )
-            .initPlugin('regions');
+          wavesurfer.regions.add({
+            start: playback.loopStart || 0,
+            end: playback.loopEnd || wavesurfer.getDuration(),
+            showTooltip: true,
+            loop: true,
+            color: theme.palette.primary.main + '80',
+          });
         } else {
-          wavesurfer.destroyPlugin('regions');
+          if (wavesurfer) {
+            wavesurfer.regions.clear();
+          }
         }
       }
-      dispatch({ type: 'loop', payload: isLooping });
     },
-    [theme.palette.primary.main, wavesurfer]
+    [playback.loopEnd, playback.loopStart, theme.palette.primary.main, wavesurfer]
   );
 
   const setPitch = useCallback((pitch: number) => {
@@ -196,6 +220,8 @@ const useAudioSource = (): {
   const setSpeed = useCallback((speed: number) => {
     dispatch({ type: 'setSpeed', payload: speed });
   }, []);
+
+  const isLoading = loading.isMetadataLoading || loading.isWavesurferLoading;
 
   return {
     setFile,
@@ -210,6 +236,7 @@ const useAudioSource = (): {
       setSpeed,
     },
     waveformRef,
+    isLoading,
   };
 };
 
