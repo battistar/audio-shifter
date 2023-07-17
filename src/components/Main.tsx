@@ -7,6 +7,7 @@ import Uploader from 'components/file/Uploader';
 import { useAudio } from 'store';
 import Waveform from 'components/playback/Waveform';
 import Loader from './Loader';
+import Zoom from './playback/Zoom';
 
 const Main = (): JSX.Element => {
   const { playback, file, metadata, setFile, waveformRef, isLoading } = useAudio();
@@ -55,7 +56,10 @@ const Main = (): JSX.Element => {
         <Container maxWidth="md">
           <Stack gap={1}>
             {file ? (
-              <FileInfo metadata={metadata} onDeleteClick={handleFileDelete} deleteDisabled={playback.isPlaying} />
+              <Stack gap={2}>
+                <Zoom />
+                <FileInfo metadata={metadata} onDeleteClick={handleFileDelete} deleteDisabled={playback.isPlaying} />
+              </Stack>
             ) : (
               <Uploader onUpload={handleUpload} />
             )}
