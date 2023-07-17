@@ -21,7 +21,7 @@ const Zoom = ({ value, onChange, sx }: ZoomProps): JSX.Element => {
   return (
     <Stack gap={2} direction="row" sx={[{ alignItems: 'center' }, ...(Array.isArray(sx) ? sx : [sx])]}>
       <ZoomOutIcon />
-      <Slider min={10} max={100} value={value} onChange={handleChange} />
+      <Slider min={1} max={20} value={value} onChange={handleChange} />
       <ZoomInIcon />
     </Stack>
   );

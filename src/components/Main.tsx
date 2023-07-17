@@ -38,6 +38,13 @@ const Main = (): JSX.Element => {
     [playback]
   );
 
+  const handleZoomChange = useCallback(
+    (zoom: number) => {
+      playback.setZoom(zoom);
+    },
+    [playback]
+  );
+
   const handleUpload = (file: File): void => {
     setFile(file);
   };
@@ -50,16 +57,20 @@ const Main = (): JSX.Element => {
     <>
       {isLoading && <Loader sx={{ position: 'fixed' }} />}
       <Stack gap={2}>
-        <Container>
-          <Waveform waveformRef={waveformRef} />
-        </Container>
+        {file && (
+          <>
+            <Container>
+              <Waveform waveformRef={waveformRef} />
+            </Container>
+            <Container maxWidth="xs">
+              <Zoom value={playback.zoom} onChange={handleZoomChange} />
+            </Container>
+          </>
+        )}
         <Container maxWidth="md">
           <Stack gap={1}>
             {file ? (
-              <Stack gap={2}>
-                <Zoom />
-                <FileInfo metadata={metadata} onDeleteClick={handleFileDelete} deleteDisabled={playback.isPlaying} />
-              </Stack>
+              <FileInfo metadata={metadata} onDeleteClick={handleFileDelete} deleteDisabled={playback.isPlaying} />
             ) : (
               <Uploader onUpload={handleUpload} />
             )}

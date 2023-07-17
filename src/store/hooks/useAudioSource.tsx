@@ -1,15 +1,17 @@
 import { useTheme } from '@mui/material';
 import Metadata from 'models/Metadata';
 import { parseBlob, selectCover } from 'music-metadata-browser';
-import { useCallback, useEffect, useReducer, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, { Region } from 'wavesurfer.js/src/plugin/regions';
+import { debounce } from 'lodash';
 
 type Playback = {
   isPlaying: boolean;
   isLooping: boolean;
   pitch: number;
   speed: number;
+  zoom: number;
   loopStart: number | null;
   loopEnd: number | null;
   play: () => void;
@@ -17,12 +19,13 @@ type Playback = {
   loop: (isLooping: boolean) => void;
   setPitch: (pitch: number) => void;
   setSpeed: (speed: number) => void;
+  setZoom: (zoom: number) => void;
 };
 
 type AudioSourceState = {
   file: File | null;
   metadata: Metadata;
-  playback: Omit<Playback, 'play' | 'pause' | 'loop' | 'setPitch' | 'setSpeed'>;
+  playback: Omit<Playback, 'play' | 'pause' | 'loop' | 'setPitch' | 'setSpeed' | 'setZoom'>;
   wavesurfer: WaveSurfer | null;
   loading: {
     isMetadataLoading: boolean;
@@ -45,6 +48,7 @@ const initialState = {
     speed: 1,
     loopStart: null,
     loopEnd: null,
+    zoom: 1,
   },
   wavesurfer: null,
   loading: {
@@ -61,6 +65,7 @@ type AudioSourceActions =
   | { type: 'loop'; payload: boolean }
   | { type: 'setPitch'; payload: number }
   | { type: 'setSpeed'; payload: number }
+  | { type: 'setZoom'; payload: number }
   | { type: 'setLoopStart'; payload: number | null }
   | { type: 'setLoopEnd'; payload: number | null }
   | { type: 'setWavesurfer'; payload: WaveSurfer | null }
@@ -93,6 +98,8 @@ const useAudioSource = (): {
           return { ...state, playback: { ...state.playback, pitch: action.payload } };
         case 'setSpeed':
           return { ...state, playback: { ...state.playback, speed: action.payload } };
+        case 'setZoom':
+          return { ...state, playback: { ...state.playback, zoom: action.payload } };
         case 'setLoopStart':
           return { ...state, playback: { ...state.playback, loopStart: action.payload } };
         case 'setLoopEnd':
@@ -221,6 +228,26 @@ const useAudioSource = (): {
     dispatch({ type: 'setSpeed', payload: speed });
   }, []);
 
+  const debouncedZoom = useMemo(
+    () =>
+      debounce((zoom: number) => {
+        if (wavesurfer) {
+          wavesurfer.zoom(zoom);
+        }
+      }, 200),
+    [wavesurfer]
+  );
+
+  const setZoom = useCallback(
+    (zoom: number) => {
+      if (wavesurfer) {
+        dispatch({ type: 'setZoom', payload: zoom });
+        debouncedZoom(zoom);
+      }
+    },
+    [debouncedZoom, wavesurfer]
+  );
+
   const isLoading = loading.isMetadataLoading || loading.isWavesurferLoading;
 
   return {
@@ -234,6 +261,7 @@ const useAudioSource = (): {
       loop,
       setPitch,
       setSpeed,
+      setZoom,
     },
     waveformRef,
     isLoading,
