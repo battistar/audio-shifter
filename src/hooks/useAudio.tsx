@@ -1,7 +1,7 @@
 import { useTheme } from '@mui/material';
 import Metadata from 'models/Metadata';
 import { parseBlob, selectCover } from 'music-metadata-browser';
-import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useReducer } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, { Region } from 'wavesurfer.js/src/plugin/regions';
 import { debounce } from 'lodash';
@@ -22,7 +22,7 @@ type Playback = {
   setZoom: (zoom: number) => void;
 };
 
-type AudioSourceState = {
+type AudioState = {
   file: File | null;
   metadata: Metadata;
   playback: Omit<Playback, 'play' | 'pause' | 'loop' | 'setPitch' | 'setSpeed' | 'setZoom'>;
@@ -57,7 +57,7 @@ const initialState = {
   },
 };
 
-type AudioSourceActions =
+type AudioActions =
   | { type: 'setFile'; payload: File | null }
   | { type: 'setMetadata'; payload: Metadata }
   | { type: 'play' }
@@ -73,16 +73,17 @@ type AudioSourceActions =
   | { type: 'setIsWavesurferLoading'; payload: boolean }
   | { type: 'reset' };
 
-const useAudioSource = (): {
+const useAudio = (
+  container: HTMLDivElement | null
+): {
   setFile: (file: File | null) => void;
   file: File | null;
   metadata: Metadata;
   playback: Playback;
-  waveformRef: React.MutableRefObject<null> | null;
   isLoading: boolean;
 } => {
   const [{ file, metadata, playback, wavesurfer, loading }, dispatch] = useReducer(
-    (state: AudioSourceState, action: AudioSourceActions) => {
+    (state: AudioState, action: AudioActions) => {
       switch (action.type) {
         case 'setFile':
           return { ...state, file: action.payload };
@@ -116,7 +117,7 @@ const useAudioSource = (): {
     },
     initialState
   );
-  const waveformRef = useRef(null);
+
   const theme = useTheme();
 
   useEffect(() => {
@@ -142,11 +143,15 @@ const useAudioSource = (): {
   }, [file]);
 
   useEffect(() => {
-    if (waveformRef.current && file) {
+    if (container && !(container instanceof HTMLDivElement)) {
+      throw new Error('Invalid Wavesurfer container. Must use div element.');
+    }
+
+    if (file && container) {
       dispatch({ type: 'setIsWavesurferLoading', payload: true });
 
       const ws = WaveSurfer.create({
-        container: waveformRef.current,
+        container: container,
         cursorColor: theme.palette.primary.main,
         splitChannels: true,
         responsive: true,
@@ -179,7 +184,7 @@ const useAudioSource = (): {
         dispatch({ type: 'reset' });
       };
     }
-  }, [theme, waveformRef, file]);
+  }, [container, theme, file]);
 
   const setFile = useCallback((file: File | null) => {
     dispatch({ type: 'setFile', payload: file });
@@ -263,9 +268,8 @@ const useAudioSource = (): {
       setSpeed,
       setZoom,
     },
-    waveformRef,
     isLoading,
   };
 };
 
-export default useAudioSource;
+export default useAudio;

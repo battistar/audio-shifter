@@ -5,7 +5,6 @@ import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
 import Main from 'components/Main';
-import { DataProvider } from 'store';
 
 const App = (): JSX.Element => {
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
@@ -23,9 +22,7 @@ const App = (): JSX.Element => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <DataProvider>
-        <Main />
-      </DataProvider>
+      <Main />
     </ThemeProvider>
   );
 };

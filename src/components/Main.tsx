@@ -1,16 +1,16 @@
 import { Container, Stack } from '@mui/material';
 import PlaybackButtons from 'components/playback/PlaybackButtons';
 import PlaybackEffects from 'components/playback/PlaybackEffects';
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import FileInfo from 'components/file/FileInfo';
 import Uploader from 'components/file/Uploader';
-import { useAudio } from 'store';
-import Waveform from 'components/playback/Waveform';
 import Loader from './Loader';
 import Zoom from './playback/Zoom';
+import useAudio from 'hooks/useAudio';
 
 const Main = (): JSX.Element => {
-  const { playback, file, metadata, setFile, waveformRef, isLoading } = useAudio();
+  const waveformRef = useRef(null);
+  const { playback, file, metadata, setFile, isLoading } = useAudio(waveformRef.current);
 
   const handlePlayClick = useCallback(() => {
     if (playback.isPlaying) {
@@ -56,16 +56,16 @@ const Main = (): JSX.Element => {
   return (
     <>
       {isLoading && <Loader sx={{ position: 'fixed' }} />}
-      <Stack gap={2}>
+      <Stack gap={2} sx={{ my: { xs: 2, sm: 3 } }}>
         {file && (
-          <>
-            <Container>
-              <Waveform waveformRef={waveformRef} />
-            </Container>
-            <Container maxWidth="xs">
-              <Zoom value={playback.zoom} onChange={handleZoomChange} />
-            </Container>
-          </>
+          <Container>
+            <div ref={waveformRef} />
+          </Container>
+        )}
+        {file && (
+          <Container maxWidth="xs">
+            <Zoom value={playback.zoom} onChange={handleZoomChange} />
+          </Container>
         )}
         <Container maxWidth="md">
           <Stack gap={1}>
