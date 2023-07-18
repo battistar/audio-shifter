@@ -24,6 +24,10 @@ const Main = (): JSX.Element => {
     playback.loop(!playback.isLooping);
   }, [playback]);
 
+  const handleReplayClick = useCallback(() => {
+    playback.replay();
+  }, [playback]);
+
   const handlePitchChange = useCallback(
     (pitch: number) => {
       playback.setPitch(pitch);
@@ -77,6 +81,7 @@ const Main = (): JSX.Element => {
             <PlaybackButtons
               onPlayClick={handlePlayClick}
               onRepeatClick={handleRepeatClick}
+              onReplayClick={handleReplayClick}
               isPlaying={playback.isPlaying}
               isLooping={playback.isLooping}
               disabled={file === null}

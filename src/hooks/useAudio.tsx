@@ -16,6 +16,7 @@ type Playback = {
   loopEnd: number | null;
   play: () => void;
   pause: () => void;
+  replay: () => void;
   loop: (isLooping: boolean) => void;
   setPitch: (pitch: number) => void;
   setSpeed: (speed: number) => void;
@@ -25,7 +26,7 @@ type Playback = {
 type AudioState = {
   file: File | null;
   metadata: Metadata;
-  playback: Omit<Playback, 'play' | 'pause' | 'loop' | 'setPitch' | 'setSpeed' | 'setZoom'>;
+  playback: Omit<Playback, 'play' | 'pause' | 'loop' | 'setPitch' | 'setSpeed' | 'setZoom' | 'replay'>;
   wavesurfer: WaveSurfer | null;
   loading: {
     isMetadataLoading: boolean;
@@ -225,6 +226,16 @@ const useAudio = (
     [playback.loopEnd, playback.loopStart, theme.palette.primary.main, wavesurfer]
   );
 
+  const replay = useCallback(() => {
+    if (wavesurfer) {
+      if (playback.isLooping && playback.loopStart) {
+        wavesurfer.setCurrentTime(playback.loopStart);
+      } else {
+        wavesurfer.setCurrentTime(0);
+      }
+    }
+  }, [playback.isLooping, playback.loopStart, wavesurfer]);
+
   const setPitch = useCallback((pitch: number) => {
     dispatch({ type: 'setPitch', payload: pitch });
   }, []);
@@ -264,6 +275,7 @@ const useAudio = (
       play,
       pause,
       loop,
+      replay,
       setPitch,
       setSpeed,
       setZoom,
