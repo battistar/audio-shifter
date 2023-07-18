@@ -228,7 +228,7 @@ const useAudioSource = (): {
     dispatch({ type: 'setSpeed', payload: speed });
   }, []);
 
-  const debouncedZoom = useMemo(
+  const debounceZoom = useMemo(
     () =>
       debounce((zoom: number) => {
         if (wavesurfer) {
@@ -242,10 +242,10 @@ const useAudioSource = (): {
     (zoom: number) => {
       if (wavesurfer) {
         dispatch({ type: 'setZoom', payload: zoom });
-        debouncedZoom(zoom);
+        debounceZoom(zoom);
       }
     },
-    [debouncedZoom, wavesurfer]
+    [debounceZoom, wavesurfer]
   );
 
   const isLoading = loading.isMetadataLoading || loading.isWavesurferLoading;
