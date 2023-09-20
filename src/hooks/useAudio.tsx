@@ -3,7 +3,7 @@ import Metadata from 'models/Metadata';
 import { parseBlob, selectCover } from 'music-metadata-browser';
 import { useCallback, useEffect, useMemo, useReducer } from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import RegionsPlugin, { Region } from 'wavesurfer.js/src/plugin/regions';
+import RegionsPlugin, { Region } from 'wavesurfer.js/plugins/regions';
 import { debounce } from 'lodash';
 
 type Playback = {
@@ -14,8 +14,7 @@ type Playback = {
   zoom: number;
   loopStart: number | null;
   loopEnd: number | null;
-  play: () => void;
-  pause: () => void;
+  playPause: () => void;
   replay: () => void;
   loop: (isLooping: boolean) => void;
   setPitch: (pitch: number) => void;
@@ -26,7 +25,7 @@ type Playback = {
 type AudioState = {
   file: File | null;
   metadata: Metadata;
-  playback: Omit<Playback, 'play' | 'pause' | 'loop' | 'setPitch' | 'setSpeed' | 'setZoom' | 'replay'>;
+  playback: Omit<Playback, 'playPause' | 'loop' | 'setPitch' | 'setSpeed' | 'setZoom' | 'replay'>;
   wavesurfer: WaveSurfer | null;
   loading: {
     isMetadataLoading: boolean;
@@ -61,8 +60,7 @@ const initialState = {
 type AudioActions =
   | { type: 'setFile'; payload: File | null }
   | { type: 'setMetadata'; payload: Metadata }
-  | { type: 'play' }
-  | { type: 'pause' }
+  | { type: 'togglePlay' }
   | { type: 'loop'; payload: boolean }
   | { type: 'setPitch'; payload: number }
   | { type: 'setSpeed'; payload: number }
@@ -90,10 +88,8 @@ const useAudio = (
           return { ...state, file: action.payload };
         case 'setMetadata':
           return { ...state, metadata: action.payload };
-        case 'play':
-          return { ...state, playback: { ...state.playback, isPlaying: true } };
-        case 'pause':
-          return { ...state, playback: { ...state.playback, isPlaying: false } };
+        case 'togglePlay':
+          return { ...state, playback: { ...state.playback, isPlaying: !state.playback.isPlaying } };
         case 'loop':
           return { ...state, playback: { ...state.playback, isLooping: action.payload } };
         case 'setPitch':
@@ -154,26 +150,25 @@ const useAudio = (
       const ws = WaveSurfer.create({
         container: container,
         cursorColor: theme.palette.primary.main,
-        splitChannels: true,
-        responsive: true,
-        plugins: [RegionsPlugin.create({})],
       });
+
+      const wsRegions = ws.registerPlugin(RegionsPlugin.create());
 
       ws.on('ready', () => {
         dispatch({ type: 'setIsWavesurferLoading', payload: false });
       });
 
-      ws.on('region-created', () => {
+      wsRegions.on('region-created', () => {
         dispatch({ type: 'loop', payload: true });
       });
 
-      ws.on('region-updated', (region: Region) => {
+      wsRegions.on('region-updated', (region: Region) => {
         dispatch({ type: 'setLoopStart', payload: region.start });
         dispatch({ type: 'setLoopEnd', payload: region.end });
       });
 
-      ws.on('region-removed', () => {
-        dispatch({ type: 'loop', payload: false });
+      wsRegions.on('region-out', (region: Region) => {
+        region.play();
       });
 
       ws.loadBlob(file);
@@ -191,35 +186,27 @@ const useAudio = (
     dispatch({ type: 'setFile', payload: file });
   }, []);
 
-  const play = useCallback(() => {
+  const playPause = useCallback(() => {
     if (wavesurfer) {
-      wavesurfer.play();
-      dispatch({ type: 'play' });
-    }
-  }, [wavesurfer]);
-
-  const pause = useCallback(() => {
-    if (wavesurfer) {
-      wavesurfer.pause();
-      dispatch({ type: 'pause' });
+      wavesurfer.playPause();
+      dispatch({ type: 'togglePlay' });
     }
   }, [wavesurfer]);
 
   const loop = useCallback(
     (isLooping: boolean) => {
       if (wavesurfer) {
+        const wsRegions = wavesurfer.getActivePlugins()[0] as RegionsPlugin;
+
         if (isLooping) {
-          wavesurfer.regions.add({
+          wsRegions.addRegion({
             start: playback.loopStart || 0,
             end: playback.loopEnd || wavesurfer.getDuration(),
-            showTooltip: true,
-            loop: true,
             color: theme.palette.primary.main + '80',
           });
         } else {
-          if (wavesurfer) {
-            wavesurfer.regions.clear();
-          }
+          wsRegions.clearRegions();
+          dispatch({ type: 'loop', payload: false });
         }
       }
     },
@@ -229,9 +216,9 @@ const useAudio = (
   const replay = useCallback(() => {
     if (wavesurfer) {
       if (playback.isLooping && playback.loopStart) {
-        wavesurfer.setCurrentTime(playback.loopStart);
+        wavesurfer.setTime(playback.loopStart);
       } else {
-        wavesurfer.setCurrentTime(0);
+        wavesurfer.setTime(0);
       }
     }
   }, [playback.isLooping, playback.loopStart, wavesurfer]);
@@ -272,8 +259,7 @@ const useAudio = (
     metadata,
     playback: {
       ...playback,
-      play,
-      pause,
+      playPause,
       loop,
       replay,
       setPitch,

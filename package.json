@@ -22,7 +22,7 @@
     "react-dom": "^18.2.0",
     "react-dropzone": "^14.2.3",
     "styled-components": "^5.3.11",
-    "wavesurfer.js": "^6.6.4"
+    "wavesurfer.js": "^7.3.2"
   },
   "devDependencies": {
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",

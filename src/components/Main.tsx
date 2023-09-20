@@ -13,11 +13,7 @@ const Main = (): JSX.Element => {
   const { playback, file, metadata, setFile, isLoading } = useAudio(waveformRef.current);
 
   const handlePlayClick = useCallback(() => {
-    if (playback.isPlaying) {
-      playback.pause();
-    } else {
-      playback.play();
-    }
+    playback.playPause();
   }, [playback]);
 
   const handleRepeatClick = useCallback(() => {
