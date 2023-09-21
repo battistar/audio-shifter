@@ -7,6 +7,7 @@ import rollupNodePolyfillsPlugin from 'rollup-plugin-polyfill-node';
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: 'audio-shifter',
   plugins: [react(), tsconfigPaths()],
   build: {
     rollupOptions: {
