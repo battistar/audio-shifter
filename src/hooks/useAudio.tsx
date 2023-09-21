@@ -181,7 +181,9 @@ const useAudio = (
         });
 
         wsRegions.on('region-out', (region: Region) => {
-          region.play();
+          if (ws.isPlaying()) {
+            region.play();
+          }
         });
 
         try {
