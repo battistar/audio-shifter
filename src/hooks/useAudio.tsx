@@ -33,6 +33,7 @@ type AudioState = {
     isMetadataLoading: boolean;
     isWavesurferLoading: boolean;
   };
+  error: Error | null;
 };
 
 const initialState: AudioState = {
@@ -58,6 +59,7 @@ const initialState: AudioState = {
     isMetadataLoading: false,
     isWavesurferLoading: false,
   },
+  error: null,
 };
 
 type AudioActions =
@@ -74,6 +76,7 @@ type AudioActions =
   | { type: 'setPitchShifter'; payload: Tone.PitchShift | null }
   | { type: 'setIsMetadataLoading'; payload: boolean }
   | { type: 'setIsWavesurferLoading'; payload: boolean }
+  | { type: 'setError'; payload: Error }
   | { type: 'reset' };
 
 const useAudio = (
@@ -84,8 +87,10 @@ const useAudio = (
   metadata: Metadata;
   playback: Playback;
   isLoading: boolean;
+  error: Error | null;
+  reset: () => void;
 } => {
-  const [{ file, metadata, playback, wavesurfer, pitchShifter, loading }, dispatch] = useReducer(
+  const [{ file, metadata, playback, wavesurfer, pitchShifter, loading, error }, dispatch] = useReducer(
     (state: AudioState, action: AudioActions) => {
       switch (action.type) {
         case 'setFile':
@@ -114,6 +119,8 @@ const useAudio = (
           return { ...state, loading: { ...state.loading, isMetadataLoading: action.payload } };
         case 'setIsWavesurferLoading':
           return { ...state, loading: { ...state.loading, isWavesurferLoading: action.payload } };
+        case 'setError':
+          return { ...state, error: action.payload };
         case 'reset':
           return initialState;
       }
@@ -146,60 +153,66 @@ const useAudio = (
   }, [file]);
 
   useEffect(() => {
-    if (container && !(container instanceof HTMLDivElement)) {
-      throw new Error('Invalid Wavesurfer container. Must use div element.');
-    }
+    const load = async (): Promise<void> => {
+      if (!wavesurfer && file && container) {
+        dispatch({ type: 'setIsWavesurferLoading', payload: true });
 
-    if (file && container) {
-      dispatch({ type: 'setIsWavesurferLoading', payload: true });
+        const audio = new Audio();
 
-      const audio = new Audio();
+        const ws = WaveSurfer.create({
+          container: container,
+          cursorColor: theme.palette.primary.main,
+          media: audio,
+        });
 
-      const ws = WaveSurfer.create({
-        container: container,
-        cursorColor: theme.palette.primary.main,
-        media: audio,
-      });
+        const wsRegions = ws.registerPlugin(RegionsPlugin.create());
 
-      const wsRegions = ws.registerPlugin(RegionsPlugin.create());
+        ws.on('ready', () => {
+          dispatch({ type: 'setIsWavesurferLoading', payload: false });
+        });
 
-      ws.on('ready', () => {
-        dispatch({ type: 'setIsWavesurferLoading', payload: false });
-      });
+        wsRegions.on('region-created', () => {
+          dispatch({ type: 'loop', payload: true });
+        });
 
-      wsRegions.on('region-created', () => {
-        dispatch({ type: 'loop', payload: true });
-      });
+        wsRegions.on('region-updated', (region: Region) => {
+          dispatch({ type: 'setLoopStart', payload: region.start });
+          dispatch({ type: 'setLoopEnd', payload: region.end });
+        });
 
-      wsRegions.on('region-updated', (region: Region) => {
-        dispatch({ type: 'setLoopStart', payload: region.start });
-        dispatch({ type: 'setLoopEnd', payload: region.end });
-      });
+        wsRegions.on('region-out', (region: Region) => {
+          region.play();
+        });
 
-      wsRegions.on('region-out', (region: Region) => {
-        region.play();
-      });
+        try {
+          await ws.loadBlob(file);
 
-      ws.loadBlob(file);
+          const audioCtx = new AudioContext();
+          Tone.setContext(audioCtx);
 
-      const audioCtx = new AudioContext();
-      Tone.setContext(audioCtx);
+          const media = audioCtx.createMediaElementSource(audio);
+          const pitchShift = new Tone.PitchShift(0);
 
-      const media = audioCtx.createMediaElementSource(audio);
-      const pitchShift = new Tone.PitchShift(0);
+          Tone.connect(media, pitchShift);
+          Tone.connect(pitchShift, audioCtx.destination);
 
-      Tone.connect(media, pitchShift);
-      Tone.connect(pitchShift, audioCtx.destination);
+          dispatch({ type: 'setPitchShifter', payload: pitchShift });
+          dispatch({ type: 'setWavesurfer', payload: ws });
+        } catch (error) {
+          dispatch({ type: 'setError', payload: error as Error });
+        }
+      }
+    };
 
-      dispatch({ type: 'setPitchShifter', payload: pitchShift });
-      dispatch({ type: 'setWavesurfer', payload: ws });
+    load();
 
-      return () => {
-        ws.destroy();
+    return () => {
+      if (wavesurfer) {
+        wavesurfer.destroy();
         dispatch({ type: 'reset' });
-      };
-    }
-  }, [container, theme, file]);
+      }
+    };
+  }, [container, theme, file, wavesurfer]);
 
   const setFile = useCallback((file: File | null) => {
     dispatch({ type: 'setFile', payload: file });
@@ -282,6 +295,10 @@ const useAudio = (
     [debounceZoom, wavesurfer]
   );
 
+  const reset = useCallback(() => {
+    dispatch({ type: 'reset' });
+  }, []);
+
   const isLoading = loading.isMetadataLoading || loading.isWavesurferLoading;
 
   return {
@@ -298,6 +315,8 @@ const useAudio = (
       setZoom,
     },
     isLoading,
+    error,
+    reset,
   };
 };
 

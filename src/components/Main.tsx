@@ -1,4 +1,13 @@
-import { Container, Stack } from '@mui/material';
+import {
+  Button,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Stack,
+} from '@mui/material';
 import PlaybackButtons from 'components/playback/PlaybackButtons';
 import PlaybackEffects from 'components/playback/PlaybackEffects';
 import { useCallback, useRef } from 'react';
@@ -10,7 +19,7 @@ import useAudio from 'hooks/useAudio';
 
 const Main = (): JSX.Element => {
   const waveformRef = useRef(null);
-  const { playback, file, metadata, setFile, isLoading } = useAudio(waveformRef.current);
+  const { playback, file, metadata, setFile, isLoading, error, reset } = useAudio(waveformRef.current);
 
   const handlePlayClick = useCallback(() => {
     playback.playPause();
@@ -53,6 +62,10 @@ const Main = (): JSX.Element => {
     setFile(null);
   };
 
+  const handleDialogClose = (): void => {
+    reset();
+  };
+
   return (
     <>
       {isLoading && <Loader sx={{ position: 'fixed' }} />}
@@ -92,6 +105,18 @@ const Main = (): JSX.Element => {
           </Stack>
         </Container>
       </Stack>
+
+      <Dialog open={error !== null} onClose={handleDialogClose}>
+        <DialogTitle>Invalid audio file</DialogTitle>
+        <DialogContent>
+          <DialogContentText>The current audio file is invalid or not supported. Try another one.</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDialogClose} autoFocus>
+            Ok
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };
