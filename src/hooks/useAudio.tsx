@@ -189,7 +189,7 @@ const useAudio = (
         try {
           await ws.loadBlob(file);
 
-          const audioCtx = new AudioContext();
+          const audioCtx = new Tone.Context();
           Tone.setContext(audioCtx);
 
           const media = audioCtx.createMediaElementSource(audio);
@@ -201,6 +201,8 @@ const useAudio = (
           dispatch({ type: 'setPitchShifter', payload: pitchShift });
           dispatch({ type: 'setWavesurfer', payload: ws });
         } catch (error) {
+          console.log(error);
+
           dispatch({ type: 'setError', payload: error as Error });
         }
       }
