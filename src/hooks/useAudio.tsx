@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useReducer } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, { Region } from 'wavesurfer.js/plugins/regions';
 import { debounce } from 'lodash';
+import * as Tone from 'tone';
 
 type Playback = {
   isPlaying: boolean;
@@ -27,13 +28,14 @@ type AudioState = {
   metadata: Metadata;
   playback: Omit<Playback, 'playPause' | 'loop' | 'setPitch' | 'setSpeed' | 'setZoom' | 'replay'>;
   wavesurfer: WaveSurfer | null;
+  pitchShifter: Tone.PitchShift | null;
   loading: {
     isMetadataLoading: boolean;
     isWavesurferLoading: boolean;
   };
 };
 
-const initialState = {
+const initialState: AudioState = {
   file: null,
   metadata: {
     cover: null,
@@ -51,6 +53,7 @@ const initialState = {
     zoom: 1,
   },
   wavesurfer: null,
+  pitchShifter: null,
   loading: {
     isMetadataLoading: false,
     isWavesurferLoading: false,
@@ -68,6 +71,7 @@ type AudioActions =
   | { type: 'setLoopStart'; payload: number | null }
   | { type: 'setLoopEnd'; payload: number | null }
   | { type: 'setWavesurfer'; payload: WaveSurfer | null }
+  | { type: 'setPitchShifter'; payload: Tone.PitchShift | null }
   | { type: 'setIsMetadataLoading'; payload: boolean }
   | { type: 'setIsWavesurferLoading'; payload: boolean }
   | { type: 'reset' };
@@ -81,7 +85,7 @@ const useAudio = (
   playback: Playback;
   isLoading: boolean;
 } => {
-  const [{ file, metadata, playback, wavesurfer, loading }, dispatch] = useReducer(
+  const [{ file, metadata, playback, wavesurfer, pitchShifter, loading }, dispatch] = useReducer(
     (state: AudioState, action: AudioActions) => {
       switch (action.type) {
         case 'setFile':
@@ -104,6 +108,8 @@ const useAudio = (
           return { ...state, playback: { ...state.playback, loopEnd: action.payload } };
         case 'setWavesurfer':
           return { ...state, wavesurfer: action.payload };
+        case 'setPitchShifter':
+          return { ...state, pitchShifter: action.payload };
         case 'setIsMetadataLoading':
           return { ...state, loading: { ...state.loading, isMetadataLoading: action.payload } };
         case 'setIsWavesurferLoading':
@@ -147,9 +153,12 @@ const useAudio = (
     if (file && container) {
       dispatch({ type: 'setIsWavesurferLoading', payload: true });
 
+      const audio = new Audio();
+
       const ws = WaveSurfer.create({
         container: container,
         cursorColor: theme.palette.primary.main,
+        media: audio,
       });
 
       const wsRegions = ws.registerPlugin(RegionsPlugin.create());
@@ -173,6 +182,16 @@ const useAudio = (
 
       ws.loadBlob(file);
 
+      const audioCtx = new AudioContext();
+      Tone.setContext(audioCtx);
+
+      const media = audioCtx.createMediaElementSource(audio);
+      const pitchShift = new Tone.PitchShift(0);
+
+      Tone.connect(media, pitchShift);
+      Tone.connect(pitchShift, audioCtx.destination);
+
+      dispatch({ type: 'setPitchShifter', payload: pitchShift });
       dispatch({ type: 'setWavesurfer', payload: ws });
 
       return () => {
@@ -223,13 +242,25 @@ const useAudio = (
     }
   }, [playback.isLooping, playback.loopStart, wavesurfer]);
 
-  const setPitch = useCallback((pitch: number) => {
-    dispatch({ type: 'setPitch', payload: pitch });
-  }, []);
+  const setPitch = useCallback(
+    (pitch: number) => {
+      if (pitchShifter) {
+        pitchShifter.pitch = pitch;
+        dispatch({ type: 'setPitch', payload: pitch });
+      }
+    },
+    [pitchShifter]
+  );
 
-  const setSpeed = useCallback((speed: number) => {
-    dispatch({ type: 'setSpeed', payload: speed });
-  }, []);
+  const setSpeed = useCallback(
+    (speed: number) => {
+      if (wavesurfer) {
+        wavesurfer.setPlaybackRate(speed);
+        dispatch({ type: 'setSpeed', payload: speed });
+      }
+    },
+    [wavesurfer]
+  );
 
   const debounceZoom = useMemo(
     () =>
