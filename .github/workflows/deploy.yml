@@ -6,8 +6,7 @@ on:
       - main
 
 jobs:
-  install_deps:
-    name: Install dependencies
+  deploy:
     runs-on: ubuntu-latest
 
     strategy:
@@ -25,26 +24,12 @@ jobs:
       - name: Install deps
         run: npm ci
 
-  check:
-    name: Check code
-    runs-on: ubuntu-latest
-
-    needs: install_deps
-
-    steps:
       - name: Prettier check
         run: npx prettier --check "src/**/*.{ts,tsx}"
 
       - name: Linter check
         run: npx eslint "src/**/*.{ts,tsx}"
 
-  build_and_deploy:
-    name: Build and deploy
-    runs-on: ubuntu-latest
-
-    needs: [install_deps, check]
-
-    steps:
       - name: Build
         run: npm run build
 

@@ -9,8 +9,7 @@ on:
       - '**'
 
 jobs:
-  install_deps:
-    name: Install dependencies
+  check:
     runs-on: ubuntu-latest
 
     strategy:
@@ -28,13 +27,6 @@ jobs:
       - name: Install deps
         run: npm ci
 
-  check:
-    name: Check code
-    runs-on: ubuntu-latest
-
-    needs: install_deps
-
-    steps:
       - name: Prettier check
         run: npx prettier --check "src/**/*.{ts,tsx}"
 
