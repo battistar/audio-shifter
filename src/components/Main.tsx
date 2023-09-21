@@ -7,6 +7,8 @@ import {
   DialogContentText,
   DialogTitle,
   Stack,
+  SxProps,
+  Theme,
 } from '@mui/material';
 import PlaybackButtons from 'components/playback/PlaybackButtons';
 import PlaybackEffects from 'components/playback/PlaybackEffects';
@@ -17,7 +19,7 @@ import Loader from './Loader';
 import Zoom from './playback/Zoom';
 import useAudio from 'hooks/useAudio';
 
-const Main = (): JSX.Element => {
+const Main = ({ sx }: { sx?: SxProps<Theme> }): JSX.Element => {
   const waveformRef = useRef(null);
   const { playback, file, metadata, setFile, isLoading, error, reset } = useAudio(waveformRef.current);
 
@@ -69,7 +71,7 @@ const Main = (): JSX.Element => {
   return (
     <>
       {isLoading && <Loader sx={{ position: 'fixed' }} />}
-      <Stack gap={2} sx={{ my: { xs: 2, sm: 3 } }}>
+      <Stack gap={2} sx={[...(Array.isArray(sx) ? sx : [sx]), { my: { xs: 2, sm: 3 } }]}>
         {file && (
           <Container>
             <div ref={waveformRef} />
