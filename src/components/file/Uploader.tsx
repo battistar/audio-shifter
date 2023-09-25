@@ -16,7 +16,7 @@ const Uploader = ({ onUpload }: UploaderProps): JSX.Element => {
 
   const { isDragAccept, getRootProps, getInputProps } = useDropzone({
     maxFiles: 1,
-    accept: { 'audio/*': [] },
+    accept: { 'audio/mp3': ['.mp3'], 'audio/wav': ['.wav'] },
     onDrop,
   });
   const { onClick, ...rootProps } = getRootProps();
@@ -44,7 +44,7 @@ const Uploader = ({ onUpload }: UploaderProps): JSX.Element => {
           alignItems: 'center',
         }}
       >
-        <Typography>Drag & drop to upload file</Typography>
+        <Typography>Drag & drop to upload file (.mp3, .wav)</Typography>
         <Divider sx={{ width: '50%' }}>OR</Divider>
         <Button variant="contained" onClick={onClick}>
           Browse file
