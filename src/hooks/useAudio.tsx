@@ -223,6 +223,10 @@ const useAudio = (
   }, []);
 
   const playPause = useCallback(() => {
+    if (Tone.context.state === 'suspended') {
+      Tone.start();
+    }
+
     if (wavesurfer) {
       wavesurfer.playPause();
       dispatch({ type: 'togglePlay' });
