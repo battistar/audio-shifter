@@ -71,16 +71,16 @@ const Main = ({ sx }: { sx?: SxProps<Theme> }): JSX.Element => {
   return (
     <>
       {isLoading && <Loader sx={{ position: 'fixed' }} />}
-      <Stack gap={2} sx={[...(Array.isArray(sx) ? sx : [sx]), { my: { xs: 2, sm: 3 } }]}>
+      <Stack gap={10} sx={[...(Array.isArray(sx) ? sx : [sx]), { my: { xs: 2, sm: 3 } }]}>
         {file && (
-          <Container>
-            <div ref={waveformRef} />
-          </Container>
-        )}
-        {file && (
-          <Container maxWidth="xs">
-            <Zoom value={playback.zoom} onChange={handleZoomChange} />
-          </Container>
+          <Stack gap={3}>
+            <Container>
+              <div ref={waveformRef} />
+            </Container>
+            <Container maxWidth="xs">
+              <Zoom value={playback.zoom} onChange={handleZoomChange} />
+            </Container>
+          </Stack>
         )}
         <Container maxWidth="md">
           <Stack gap={1}>
