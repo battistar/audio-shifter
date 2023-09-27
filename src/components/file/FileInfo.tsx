@@ -1,4 +1,4 @@
-import { Box, IconButton, Stack, Typography, styled } from '@mui/material';
+import { Box, IconButton, Stack, Tooltip, Typography, styled } from '@mui/material';
 import { Clear as ClearIcon } from '@mui/icons-material';
 import Metadata from 'models/Metadata';
 import { useCallback, useMemo } from 'react';
@@ -43,9 +43,11 @@ const FileInfo = ({ metadata, onDeleteClick, deleteDisabled = false }: FileInfoP
         <Typography component="div">{metadata.artist ?? 'Unknown'}</Typography>
         <Typography component="div">{metadata.album ?? 'Unknown'}</Typography>
       </Stack>
-      <IconButton onClick={handleClick} disabled={deleteDisabled} sx={{ alignSelf: 'center' }}>
-        <ClearIcon />
-      </IconButton>
+      <Tooltip title="Remove file">
+        <IconButton onClick={handleClick} disabled={deleteDisabled} sx={{ alignSelf: 'center' }}>
+          <ClearIcon />
+        </IconButton>
+      </Tooltip>
     </Stack>
   );
 };

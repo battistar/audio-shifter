@@ -1,4 +1,4 @@
-import { IconButton, SxProps, Theme } from '@mui/material';
+import { IconButton, SxProps, Theme, Tooltip } from '@mui/material';
 import { Repeat as RepeatIcon } from '@mui/icons-material';
 
 interface RepeatButtonProps {
@@ -10,11 +10,13 @@ interface RepeatButtonProps {
 
 const RepeatButton = ({ onClick, actived = false, disabled = false, sx = [] }: RepeatButtonProps): JSX.Element => {
   return (
-    <IconButton onClick={onClick} disabled={disabled} sx={[...(Array.isArray(sx) ? sx : [sx])]}>
-      <RepeatIcon
-        sx={{ height: 32, width: 32, color: (theme) => (actived ? theme.palette.primary.main : 'inherit') }}
-      ></RepeatIcon>
-    </IconButton>
+    <Tooltip title="Loop">
+      <IconButton onClick={onClick} disabled={disabled} sx={[...(Array.isArray(sx) ? sx : [sx])]}>
+        <RepeatIcon
+          sx={{ height: 32, width: 32, color: (theme) => (actived ? theme.palette.primary.main : 'inherit') }}
+        ></RepeatIcon>
+      </IconButton>
+    </Tooltip>
   );
 };
 
