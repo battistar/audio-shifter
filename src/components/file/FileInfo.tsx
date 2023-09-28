@@ -1,7 +1,7 @@
 import { Box, IconButton, Stack, Tooltip, Typography, styled } from '@mui/material';
 import { Clear as ClearIcon } from '@mui/icons-material';
 import Metadata from 'models/Metadata';
-import { useCallback, useMemo } from 'react';
+import { KeyboardEvent, useCallback, useMemo } from 'react';
 import noCover from 'assets/images/no-cover.png';
 
 const Cover = styled('img')({
@@ -17,6 +17,10 @@ interface FileInfoProps {
 }
 
 const FileInfo = ({ metadata, onDeleteClick, deleteDisabled = false }: FileInfoProps): JSX.Element => {
+  const handleKeyDown = useCallback((event: KeyboardEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+  }, []);
+
   const handleClick = useCallback((): void => {
     if (onDeleteClick) {
       onDeleteClick();
@@ -44,7 +48,12 @@ const FileInfo = ({ metadata, onDeleteClick, deleteDisabled = false }: FileInfoP
         <Typography component="div">{metadata.album ?? 'Unknown'}</Typography>
       </Stack>
       <Tooltip title="Remove file">
-        <IconButton onClick={handleClick} disabled={deleteDisabled} sx={{ alignSelf: 'center' }}>
+        <IconButton
+          onClick={handleClick}
+          onKeyDown={handleKeyDown}
+          disabled={deleteDisabled}
+          sx={{ alignSelf: 'center' }}
+        >
           <ClearIcon />
         </IconButton>
       </Tooltip>

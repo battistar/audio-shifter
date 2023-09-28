@@ -1,5 +1,5 @@
 import { Box, Button, Divider, Stack, Typography } from '@mui/material';
-import { useCallback } from 'react';
+import { KeyboardEvent, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 
 interface UploaderProps {
@@ -22,9 +22,14 @@ const Uploader = ({ onUpload }: UploaderProps): JSX.Element => {
   const { onClick, ...rootProps } = getRootProps();
   const inputProps = getInputProps();
 
+  const handleKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+    event.preventDefault();
+  }, []);
+
   return (
     <Box
       {...rootProps}
+      onKeyDown={handleKeyDown}
       sx={{
         justifyContent: 'center',
         alignItems: 'center',
