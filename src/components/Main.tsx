@@ -71,7 +71,10 @@ const Main = ({ sx }: { sx?: SxProps<Theme> }): JSX.Element => {
   return (
     <>
       {isLoading && <Loader sx={{ position: 'fixed' }} />}
-      <Stack component={'main'} gap={10} sx={[...(Array.isArray(sx) ? sx : [sx]), { my: { xs: 2, sm: 3 } }]}>
+      <Stack
+        component={'main'}
+        sx={[...(Array.isArray(sx) ? sx : [sx]), { gap: { xs: 3, sm: 10 }, my: { xs: 2, sm: 3 } }]}
+      >
         {file && (
           <Stack gap={3}>
             <Container>
